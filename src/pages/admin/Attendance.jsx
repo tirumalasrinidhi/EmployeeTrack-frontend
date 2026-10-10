@@ -4,6 +4,13 @@ import AdminSidebar from '../../components/admin/AdminSidebar';
 import TopNav from '../../components/common/TopNav';
 import { attendanceAPI } from '../../services/api';
 
+// "HH:mm:ss" → "HH:mm" compact display. Null/missing → "—"
+const fmtTime = (t) => {
+  if (!t) return '—';
+  if (Array.isArray(t)) return `${String(t[0]).padStart(2,'0')}:${String(t[1]).padStart(2,'0')}`;
+  return String(t).slice(0, 5);
+};
+
 const AdminAttendance = () => {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -37,7 +44,7 @@ const AdminAttendance = () => {
             </div>
             <div className="table-wrapper">
               {loading ? (
-                <div className="loading-container"><div className="spinner"></div></div>
+                <div className="loading-container"><div className="spinner" /></div>
               ) : records.length === 0 ? (
                 <div className="empty-state"><Clock size={48} /><h4>No attendance records</h4></div>
               ) : (
@@ -46,22 +53,33 @@ const AdminAttendance = () => {
                     <tr>
                       <th>Emp ID</th>
                       <th>Employee</th>
+                      <th>Department</th>
                       <th>Date</th>
                       <th>Check In</th>
                       <th>Check Out</th>
-                      <th>Working Hours</th>
+                      <th>Working Duration</th>
                       <th>Status</th>
                     </tr>
                   </thead>
                   <tbody>
                     {records.map(r => (
                       <tr key={r.id}>
-                        <td style={{ fontWeight: 700, color: '#0f3460' }}>{r.employee?.employeeId}</td>
-                        <td style={{ fontWeight: 600 }}>{r.employee?.user?.name}</td>
+                        <td style={{ fontWeight: 700, color: '#0f3460' }}>{r.employeeId}</td>
+                        <td style={{ fontWeight: 600 }}>{r.employeeName}</td>
+                        <td style={{ color: '#64748b' }}>{r.departmentName || '—'}</td>
                         <td>{r.date}</td>
-                        <td>{r.checkIn || '—'}</td>
-                        <td>{r.checkOut || '—'}</td>
-                        <td>{r.workingHours ? `${r.workingHours}h` : '—'}</td>
+                        <td>{fmtTime(r.checkIn)}</td>
+                        <td>
+                          {r.checkOut
+                            ? fmtTime(r.checkOut)
+                            : r.checkIn
+                              ? <span style={{ color: '#f59e0b', fontStyle: 'italic', fontSize: '12px' }}>Not checked out</span>
+                              : '—'}
+                        </td>
+                        {/* workingDuration is pre-computed "HH:mm:ss" from the backend */}
+                        <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>
+                          {r.checkOut ? (r.workingDuration ?? '—') : '—'}
+                        </td>
                         <td>{statusBadge(r.status)}</td>
                       </tr>
                     ))}

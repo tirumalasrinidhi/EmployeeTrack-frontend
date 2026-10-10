@@ -54,18 +54,26 @@ const HRAttendanceLeaveReports = () => {
               <div className="table-wrapper">
                 <table>
                   <thead>
-                    <tr><th>Emp ID</th><th>Employee</th><th>Department</th><th>Date</th><th>Check In</th><th>Check Out</th><th>Hours</th><th>Status</th></tr>
+                    <tr><th>Emp ID</th><th>Employee</th><th>Department</th><th>Date</th><th>Check In</th><th>Check Out</th><th>Working Duration</th><th>Status</th></tr>
                   </thead>
                   <tbody>
                     {attendance.map(r => (
                       <tr key={r.id}>
-                        <td style={{ fontWeight: 700, color: '#0f3460' }}>{r.employee?.employeeId}</td>
-                        <td style={{ fontWeight: 600 }}>{r.employee?.user?.name}</td>
-                        <td style={{ color: '#64748b' }}>{r.employee?.department?.name || '—'}</td>
+                        <td style={{ fontWeight: 700, color: '#0f3460' }}>{r.employeeId}</td>
+                        <td style={{ fontWeight: 600 }}>{r.employeeName}</td>
+                        <td style={{ color: '#64748b' }}>{r.departmentName || '—'}</td>
                         <td>{r.date}</td>
                         <td>{r.checkIn || '—'}</td>
-                        <td>{r.checkOut || '—'}</td>
-                        <td>{r.workingHours ? `${r.workingHours}h` : '—'}</td>
+                        <td>
+                          {r.checkOut
+                            ? r.checkOut
+                            : r.checkIn
+                              ? <span style={{ color: '#f59e0b', fontStyle: 'italic', fontSize: '12px' }}>Not checked out</span>
+                              : '—'}
+                        </td>
+                        <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>
+                          {r.checkOut ? (r.workingDuration ?? '—') : '—'}
+                        </td>
                         <td>{statusBadge(r.status)}</td>
                       </tr>
                     ))}

@@ -84,6 +84,7 @@ export const payrollAPI = {
   correct: (data) => api.post('/payroll/correct', data),
   getAll: () => api.get('/payroll'),
   getMy: () => api.get('/payroll/my'),
+  getMySalaryInsights: () => api.get('/payroll/my/insights'),
   getByEmployee: (id) => api.get(`/payroll/employee/${id}`),
   getById: (id) => api.get(`/payroll/${id}`),
   getSalaryConfigStatus: () => api.get('/payroll/salary-config-status'),

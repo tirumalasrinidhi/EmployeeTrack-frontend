@@ -4,12 +4,13 @@ import EmployeeSidebar from '../../components/employee/EmployeeSidebar';
 import TopNav from '../../components/common/TopNav';
 import { attendanceAPI } from '../../services/api';
 
-// Format "HH:mm:ss" ISO time string → "HH:mm", safely handles null/array
+// All time strings arrive pre-formatted from the backend as "HH:mm:ss".
+// We slice to "HH:mm" for compact display and keep full string for working duration.
 const fmtTime = (t) => {
   if (!t) return '—';
-  // Backend may return array [H,M,S] if Jackson wasn't configured — guard it
+  // Guard legacy array format (shouldn't occur with the new DTO, but just in case)
   if (Array.isArray(t)) return `${String(t[0]).padStart(2,'0')}:${String(t[1]).padStart(2,'0')}`;
-  return String(t).slice(0, 5);
+  return String(t).slice(0, 5); // "HH:mm"
 };
 
 const EmployeeAttendance = () => {
@@ -58,16 +59,11 @@ const EmployeeAttendance = () => {
   };
 
   const statusBadge = (status) => {
-    const map = {
-      PRESENT: 'badge-success',
-      ABSENT: 'badge-danger',
-      HALF_DAY: 'badge-warning',
-      LEAVE: 'badge-info',
-    };
+    const map = { PRESENT: 'badge-success', ABSENT: 'badge-danger', HALF_DAY: 'badge-warning', LEAVE: 'badge-info' };
     return <span className={`badge ${map[status] || 'badge-secondary'}`}>{status}</span>;
   };
 
-  const isCheckedIn = todayRecord?.checkIn != null;
+  const isCheckedIn  = todayRecord?.checkIn  != null;
   const isCheckedOut = todayRecord?.checkOut != null;
 
   return (
@@ -81,7 +77,9 @@ const EmployeeAttendance = () => {
               <h2>Attendance</h2>
               <p>Track your daily attendance</p>
             </div>
-            <span className="badge badge-info">{new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+            <span className="badge badge-info">
+              {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            </span>
           </div>
 
           {message.text && (
@@ -115,8 +113,13 @@ const EmployeeAttendance = () => {
             {todayRecord && (
               <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
                 <div style={{ padding: '10px 16px', background: '#f0f4f8', borderRadius: '8px' }}>
-                  <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '2px' }}>Working Hours</p>
-                  <p style={{ fontWeight: 700, color: '#0f3460' }}>{todayRecord?.workingHours != null ? `${todayRecord.workingHours}h` : '—'}</p>
+                  <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '2px' }}>Working Duration</p>
+                  <p style={{ fontWeight: 700, color: '#0f3460', fontFamily: 'monospace' }}>
+                    {/* workingDuration is "HH:mm:ss" pre-computed in the backend */}
+                    {isCheckedOut
+                      ? (todayRecord.workingDuration ?? '—')
+                      : '—'}
+                  </p>
                 </div>
                 <div style={{ padding: '10px 16px', background: '#f0f4f8', borderRadius: '8px' }}>
                   <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '2px' }}>Status</p>
@@ -133,7 +136,7 @@ const EmployeeAttendance = () => {
             </div>
             <div className="table-wrapper">
               {loading ? (
-                <div className="loading-container"><div className="spinner"></div></div>
+                <div className="loading-container"><div className="spinner" /></div>
               ) : records.length === 0 ? (
                 <div className="empty-state">
                   <Clock size={48} />
@@ -147,7 +150,7 @@ const EmployeeAttendance = () => {
                       <th>Date</th>
                       <th>Check In</th>
                       <th>Check Out</th>
-                      <th>Working Hours</th>
+                      <th>Working Duration</th>
                       <th>Status</th>
                     </tr>
                   </thead>
@@ -155,9 +158,19 @@ const EmployeeAttendance = () => {
                     {records.map(r => (
                       <tr key={r.id}>
                         <td style={{ fontWeight: 600 }}>{r.date}</td>
+                        {/* fmtTime slices "HH:mm:ss" → "HH:mm" for compact display */}
                         <td>{fmtTime(r.checkIn)}</td>
-                        <td>{fmtTime(r.checkOut)}</td>
-                        <td>{r.workingHours != null ? `${r.workingHours}h` : '—'}</td>
+                        <td>
+                          {r.checkOut
+                            ? fmtTime(r.checkOut)
+                            : r.checkIn
+                              ? <span style={{ color: '#f59e0b', fontStyle: 'italic', fontSize: '12px' }}>Not checked out</span>
+                              : '—'}
+                        </td>
+                        {/* workingDuration is already "HH:mm:ss" from the backend DTO */}
+                        <td style={{ fontFamily: 'monospace' }}>
+                          {r.checkOut ? (r.workingDuration ?? '—') : '—'}
+                        </td>
                         <td>{statusBadge(r.status)}</td>
                       </tr>
                     ))}
