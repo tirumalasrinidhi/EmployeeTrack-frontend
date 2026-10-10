@@ -1,6 +1,9 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8080/api';
+// API base URL:
+//   Local dev  → http://localhost:8080/api  (from .env.development or fallback)
+//   Production → https://employeetrack-backend-p2k3.onrender.com/api  (from .env.production, baked by Vite at build)
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
