@@ -101,7 +101,13 @@ const Register = () => {
   const [showConfirm, setShowConfirm] = useState(false);
 
   useEffect(() => {
-    departmentAPI.getAll().then(res => setDepartments(res.data)).catch(() => {});
+    departmentAPI.getAll()
+      .then(res => setDepartments(res.data))
+      .catch((err) => {
+        // Log so it's visible in DevTools — previously silent, hiding CORS/network errors
+        console.error('Failed to load departments:', err?.response?.status, err?.message);
+        setServerError('Could not load departments. Please refresh the page or try again.');
+      });
   }, []);
 
   // Validate a single field and update errs state
