@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import EmployeeSidebar from '../../components/employee/EmployeeSidebar';
 import TopNav from '../../components/common/TopNav';
-import { dashboardAPI, payrollAPI } from '../../services/api';
+import { attendanceAPI, dashboardAPI, payrollAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 
 const EmployeeDashboard = () => {
@@ -13,6 +13,8 @@ const EmployeeDashboard = () => {
   const [data, setData] = useState(null);
   const [insights, setInsights] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [attendanceActionLoading, setAttendanceActionLoading] = useState(false);
+  const [attendanceMessage, setAttendanceMessage] = useState({ type: '', text: '' });
 
   useEffect(() => {
     Promise.all([
@@ -40,6 +42,31 @@ const EmployeeDashboard = () => {
   const today = data?.todayAttendance;
   const checkedIn  = today?.checkIn  != null;
   const checkedOut = today?.checkOut != null;
+
+  const handleAttendanceAction = async (action) => {
+    setAttendanceActionLoading(true);
+    setAttendanceMessage({ type: '', text: '' });
+    try {
+      if (action === 'check-in') {
+        await attendanceAPI.checkIn();
+      } else {
+        await attendanceAPI.checkOut();
+      }
+      setAttendanceMessage({
+        type: 'success',
+        text: action === 'check-in' ? 'Checked in successfully!' : 'Checked out successfully!',
+      });
+      const dashRes = await dashboardAPI.employee();
+      setData(dashRes.data);
+    } catch (err) {
+      setAttendanceMessage({
+        type: 'error',
+        text: err.response?.data?.message || `${action === 'check-in' ? 'Check-in' : 'Check-out'} failed`,
+      });
+    } finally {
+      setAttendanceActionLoading(false);
+    }
+  };
 
   return (
     <div className="app-layout">
@@ -101,6 +128,11 @@ const EmployeeDashboard = () => {
                 <h3 style={{ fontWeight: 700, marginBottom: '16px', color: '#0f3460', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <Clock size={18} /> Today's Attendance
                 </h3>
+                {attendanceMessage.text && (
+                  <div className={`alert ${attendanceMessage.type === 'success' ? 'alert-success' : 'alert-error'}`}>
+                    {attendanceMessage.text}
+                  </div>
+                )}
                 {!today ? (
                   <p style={{ color: '#94a3b8', fontSize: '14px' }}>No attendance record yet for today.</p>
                 ) : (
@@ -136,6 +168,26 @@ const EmployeeDashboard = () => {
                     </div>
                   </div>
                 )}
+                <div className="attendance-actions" style={{ marginTop: '16px', marginBottom: 0 }}>
+                  <button
+                    className="check-btn check-in"
+                    id="dashboard-check-in-btn"
+                    onClick={() => handleAttendanceAction('check-in')}
+                    disabled={checkedIn || attendanceActionLoading}
+                  >
+                    <LogIn size={20} />
+                    {checkedIn ? `Checked In at ${today.checkIn}` : 'Check In'}
+                  </button>
+                  <button
+                    className="check-btn check-out"
+                    id="dashboard-check-out-btn"
+                    onClick={() => handleAttendanceAction('check-out')}
+                    disabled={!checkedIn || checkedOut || attendanceActionLoading}
+                  >
+                    <LogOut size={20} />
+                    {checkedOut ? `Checked Out at ${today.checkOut}` : 'Check Out'}
+                  </button>
+                </div>
               </div>
 
               {/* ── My Information ── */}
