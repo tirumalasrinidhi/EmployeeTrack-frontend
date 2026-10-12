@@ -52,6 +52,7 @@ const AdminSidebar = () => {
           <NavLink
             key={to}
             to={to}
+            onClick={() => window.dispatchEvent(new Event('close-mobile-sidebar'))}
             className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
           >
             <Icon className="nav-icon" size={18} />
