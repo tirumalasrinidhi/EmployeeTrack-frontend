@@ -82,6 +82,9 @@ const Register = () => {
   const navigate   = useNavigate();
 
   const [departments, setDepartments] = useState([]);
+  const [departmentsLoading, setDepartmentsLoading] = useState(true);
+  const [departmentsError, setDepartmentsError] = useState('');
+  const [departmentRetry, setDepartmentRetry] = useState(0);
   const [form, setForm] = useState({
     name: '', email: '', password: '', confirmPassword: '',
     department: '', designation: '', phone: '',
@@ -101,14 +104,43 @@ const Register = () => {
   const [showConfirm, setShowConfirm] = useState(false);
 
   useEffect(() => {
-    departmentAPI.getAll()
-      .then(res => setDepartments(res.data))
-      .catch((err) => {
-        // Log so it's visible in DevTools — previously silent, hiding CORS/network errors
-        console.error('Failed to load departments:', err?.response?.status, err?.message);
-        setServerError('Could not load departments. Please refresh the page or try again.');
-      });
-  }, []);
+    let cancelled = false;
+    let retryTimer;
+
+    const loadDepartments = async () => {
+      setDepartmentsLoading(true);
+      setDepartmentsError('');
+
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          const res = await departmentAPI.getAll();
+          if (cancelled) return;
+          setDepartments(res.data);
+          setDepartmentsLoading(false);
+          return;
+        } catch (err) {
+          if (cancelled) return;
+          console.error('Failed to load departments:', err?.response?.status, err?.message);
+
+          if (attempt === 2) {
+            setDepartmentsError('Could not load departments. Check your connection and try again.');
+            setDepartmentsLoading(false);
+            return;
+          }
+
+          await new Promise(resolve => {
+            retryTimer = setTimeout(resolve, attempt === 0 ? 2000 : 5000);
+          });
+        }
+      }
+    };
+
+    loadDepartments();
+    return () => {
+      cancelled = true;
+      clearTimeout(retryTimer);
+    };
+  }, [departmentRetry]);
 
   // Validate a single field and update errs state
   const validateField = (name, value) => {
@@ -326,12 +358,27 @@ const Register = () => {
                 onChange={handleChange}
                 onBlur={handleBlur}
                 style={{ border: borderFor('department') }}
+                disabled={departmentsLoading || departments.length === 0}
               >
-                <option value="">Select Department</option>
+                <option value="">
+                  {departmentsLoading ? 'Loading departments…' : departmentsError ? 'Departments unavailable' : 'Select Department'}
+                </option>
                 {departments.map(d => (
                   <option key={d.id} value={d.name}>{d.name}</option>
                 ))}
               </select>
+              {departmentsError && (
+                <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
+                  <span style={{ color: '#ef4444' }}>{departmentsError}</span>
+                  <button
+                    type="button"
+                    onClick={() => setDepartmentRetry(count => count + 1)}
+                    style={{ border: 0, padding: 0, background: 'none', color: '#0284c7', font: 'inherit', fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
               <FieldError msg={touched.department ? errs.department : ''} />
             </div>
 
