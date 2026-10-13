@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Building2, Eye, EyeOff, UserPlus, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 import { authAPI, departmentAPI } from '../../services/api';
@@ -85,6 +85,9 @@ const Register = () => {
   const [departmentsLoading, setDepartmentsLoading] = useState(true);
   const [departmentsError, setDepartmentsError] = useState('');
   const [departmentRetry, setDepartmentRetry] = useState(0);
+  const [departmentMenuOpen, setDepartmentMenuOpen] = useState(false);
+  const departmentDropdownRef = useRef(null);
+  const departmentTriggerRef = useRef(null);
   const [form, setForm] = useState({
     name: '', email: '', password: '', confirmPassword: '',
     department: '', designation: '', phone: '',
@@ -142,6 +145,19 @@ const Register = () => {
     };
   }, [departmentRetry]);
 
+  useEffect(() => {
+    if (!departmentMenuOpen) return undefined;
+
+    const closeOnOutsideTap = (event) => {
+      if (!departmentDropdownRef.current?.contains(event.target)) {
+        setDepartmentMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('pointerdown', closeOnOutsideTap);
+    return () => document.removeEventListener('pointerdown', closeOnOutsideTap);
+  }, [departmentMenuOpen]);
+
   // Validate a single field and update errs state
   const validateField = (name, value) => {
     let msg = '';
@@ -180,6 +196,15 @@ const Register = () => {
     const { name, value } = e.target;
     setTouched(prev => ({ ...prev, [name]: true }));
     validateField(name, value);
+  };
+
+  const handleDepartmentSelect = (department) => {
+    setForm(prev => ({ ...prev, department }));
+    setTouched(prev => ({ ...prev, department: true }));
+    setErrs(prev => ({ ...prev, department: RULES.department(department) }));
+    setServerError('');
+    setDepartmentMenuOpen(false);
+    departmentTriggerRef.current?.focus();
   };
 
   // Validate all fields; return true if form is valid
@@ -349,24 +374,58 @@ const Register = () => {
           {/* ── Row: Department + Designation ── */}
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Department <span style={{ color: '#ef4444' }}>*</span></label>
-              <select
-                name="department"
-                id="reg-department"
-                className="form-control"
-                value={form.department}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                style={{ border: borderFor('department') }}
-                disabled={departmentsLoading || departments.length === 0}
+              <label id="reg-department-label" className="form-label">Department <span style={{ color: '#ef4444' }}>*</span></label>
+              <div
+                className="department-picker"
+                ref={departmentDropdownRef}
+                onBlur={event => {
+                  if (!event.currentTarget.contains(event.relatedTarget)) setDepartmentMenuOpen(false);
+                }}
               >
-                <option value="">
-                  {departmentsLoading ? 'Loading departments…' : departmentsError ? 'Departments unavailable' : 'Select Department'}
-                </option>
-                {departments.map(d => (
-                  <option key={d.id} value={d.name}>{d.name}</option>
-                ))}
-              </select>
+                <button
+                  type="button"
+                  id="reg-department"
+                  ref={departmentTriggerRef}
+                  className="form-control department-picker-trigger"
+                  aria-haspopup="listbox"
+                  aria-expanded={departmentMenuOpen}
+                  aria-controls="reg-department-options"
+                  aria-labelledby="reg-department-label reg-department-value"
+                  aria-invalid={Boolean(touched.department && errs.department)}
+                  aria-describedby={touched.department && errs.department ? 'reg-department-error' : undefined}
+                  onClick={() => setDepartmentMenuOpen(open => !open)}
+                  onKeyDown={event => {
+                    if (event.key === 'Escape') setDepartmentMenuOpen(false);
+                    if (event.key === 'ArrowDown') setDepartmentMenuOpen(true);
+                  }}
+                  style={{ border: borderFor('department') }}
+                >
+                  <span id="reg-department-value">{form.department || (departmentsLoading ? 'Loading departments…' : departmentsError ? 'Departments unavailable' : 'Select Department')}</span>
+                  <span className="department-picker-chevron" aria-hidden="true" />
+                </button>
+                {departmentMenuOpen && (
+                  <div id="reg-department-options" className="department-picker-options" role="listbox" aria-label="Department">
+                    {departmentsLoading ? (
+                      <div className="department-picker-message" role="status">Loading departments…</div>
+                    ) : departmentsError ? (
+                      <div className="department-picker-message" role="status">Departments unavailable. Use Retry below.</div>
+                    ) : departments.length === 0 ? (
+                      <div className="department-picker-message" role="status">No departments available.</div>
+                    ) : departments.map(department => (
+                      <button
+                        key={department.id}
+                        type="button"
+                        role="option"
+                        aria-selected={form.department === department.name}
+                        className="department-picker-option"
+                        onClick={() => handleDepartmentSelect(department.name)}
+                      >
+                        {department.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               {departmentsError && (
                 <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
                   <span style={{ color: '#ef4444' }}>{departmentsError}</span>
@@ -379,7 +438,7 @@ const Register = () => {
                   </button>
                 </div>
               )}
-              <FieldError msg={touched.department ? errs.department : ''} />
+              {touched.department && errs.department && <div id="reg-department-error"><FieldError msg={errs.department} /></div>}
             </div>
 
             <div className="form-group">

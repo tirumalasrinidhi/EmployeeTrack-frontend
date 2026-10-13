@@ -649,6 +649,78 @@ select.form-control {
   padding-right: 36px;
 }
 
+.department-picker {
+  position: relative;
+}
+
+.department-picker-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.department-picker-trigger:focus-visible,
+.department-picker-option:focus-visible {
+  outline: 2px solid var(--highlight);
+  outline-offset: 2px;
+}
+
+.department-picker-chevron {
+  width: 0;
+  height: 0;
+  flex: 0 0 auto;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid #64748b;
+}
+
+.department-picker-options {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: min(240px, 40vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 20px rgba(15, 52, 96, 0.18);
+  -webkit-overflow-scrolling: touch;
+}
+
+.department-picker-option {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 0;
+  background: var(--white);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.department-picker-option:hover,
+.department-picker-option:focus,
+.department-picker-option[aria-selected="true"] {
+  background: #eff6ff;
+}
+
+.department-picker-message {
+  padding: 12px 14px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
 .form-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
